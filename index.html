@@ -858,7 +858,8 @@
                     handValue = RANK_VALUES[pairRank] * 1000 + RANK_VALUES[kicker.rank];
                 } else {
                     handRank = HAND_RANKS.HIGH_CARD; handName = 'High Card';
-                    handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 2 - i), 0);
+                    // Use same exponent base as 5-card (start from 15^4) for fair comparison
+                    handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 4 - i), 0);
                 }
             }
 
