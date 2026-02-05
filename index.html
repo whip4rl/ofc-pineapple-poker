@@ -844,17 +844,18 @@
                 handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 4 - i), 0);
             }
 
-            // 3-card front row adjustments
+            // 3-card front row: use same value scale as 5-card hands for proper foul detection
             if (cards.length === 3) {
                 if (counts[0] === 3) {
                     handRank = HAND_RANKS.TRIPS; handName = 'Trips';
                     const tripRank = Object.keys(rankCounts).find(r => rankCounts[r] === 3);
-                    handValue = RANK_VALUES[tripRank];
+                    handValue = RANK_VALUES[tripRank] * 100;
                 } else if (counts[0] === 2) {
                     handRank = HAND_RANKS.PAIR; handName = 'Pair';
                     const pairRank = Object.keys(rankCounts).find(r => rankCounts[r] === 2);
                     const kicker = sorted.find(c => c.rank !== pairRank);
-                    handValue = RANK_VALUES[pairRank] * 100 + RANK_VALUES[kicker.rank];
+                    // Use same scale as 5-card pair (pairRank * 1000) for fair comparison
+                    handValue = RANK_VALUES[pairRank] * 1000 + RANK_VALUES[kicker.rank];
                 } else {
                     handRank = HAND_RANKS.HIGH_CARD; handName = 'High Card';
                     handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 2 - i), 0);
