@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFC Pineapple Poker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 15px;
+            background: #1a1b26;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #a9b1d6;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 10px 0;
+            font-size: 1.8em;
+            color: #7aa2f7;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            background: #24283b;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #7aa2f7;
+            color: #1a1b26;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #89b4fa;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #414868;
+            color: #565f89;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: #bb9af7;
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: #cba6ff;
+        }
+
+        button.danger {
+            background: #f7768e;
+        }
+
+        button.daily {
+            background: linear-gradient(135deg, #e0af68 0%, #ff9e64 100%);
+        }
+
+        .status {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+        }
+
+        .status-item {
+            background: #1a1b26;
+            padding: 5px 12px;
+            border-radius: 4px;
+        }
+
+        .status-item strong {
+            color: #7dcfff;
+        }
+
+        /* Game Area */
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 15px;
+        }
+
+        .boards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Player Board */
+        .board {
+            background: #24283b;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #414868;
+        }
+
+        .board-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .board-title.player {
+            color: #9ece6a;
+        }
+
+        .board-title.ai {
+            color: #f7768e;
+        }
+
+        .board-score {
+            font-size: 13px;
+        }
+
+        .board-score .royalties {
+            color: #e0af68;
+        }
+
+        .board-score .foul {
+            color: #f7768e;
+            font-weight: bold;
+        }
+
+        .board-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .row-label {
+            width: 55px;
+            font-size: 12px;
+            color: #565f89;
+            text-transform: uppercase;
+        }
+
+        .row-cards {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .row-info {
+            font-size: 11px;
+            color: #7dcfff;
+            min-width: 100px;
+            text-align: right;
+        }
+
+        .row-info.royalty {
+            color: #e0af68;
+        }
+
+        /* Card Slots */
+        .card-slot {
+            width: 48px;
+            height: 68px;
+            border: 2px dashed #414868;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .card-slot:hover:not(.filled):not(.disabled) {
+            border-color: #7aa2f7;
+            background: rgba(122, 162, 247, 0.1);
+        }
+
+        .card-slot.highlight {
+            border-color: #9ece6a;
+            background: rgba(158, 206, 106, 0.15);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .card-slot.filled {
+            border: none;
+            cursor: default;
+        }
+
+        .card-slot.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Cards */
+        .card {
+            width: 48px;
+            height: 68px;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3px 4px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            user-select: none;
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .card:hover:not(.in-slot):not(.face-down) {
+            transform: translateY(-3px);
+            box-shadow: 2px 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .card.selected {
+            outline: 3px solid #9ece6a;
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(158, 206, 106, 0.4);
+        }
+
+        .card.in-slot {
+            cursor: default;
+        }
+
+        .card.face-down {
+            background: linear-gradient(135deg, #7aa2f7 0%, #bb9af7 100%);
+            cursor: default;
+        }
+
+        .card.face-down::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+        }
+
+        .card.red {
+            color: #f7768e;
+        }
+
+        .card.black {
+            color: #1a1b26;
+        }
+
+        .card .corner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+            font-size: 11px;
+        }
+
+        .card .corner.bottom {
+            align-self: flex-end;
+            transform: rotate(180deg);
+        }
+
+        .card .center-suit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+        }
+
+        /* Hand Area */
+        .hand-area {
+            background: #24283b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 12px;
+        }
+
+        .hand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .hand-title {
+            font-size: 13px;
+            color: #7dcfff;
+        }
+
+        .hand-instruction {
+            font-size: 12px;
+            color: #565f89;
+        }
+
+        .hand-cards {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .discard-btn {
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        /* Side Panel */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .panel-section {
+            background: #24283b;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            color: #bb9af7;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #414868;
+        }
+
+        /* Probability Panel */
+        .prob-item {
+            font-size: 11px;
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .prob-label {
+            color: #a9b1d6;
+        }
+
+        .prob-value {
+            color: #9ece6a;
+        }
+
+        .prob-value.low {
+            color: #f7768e;
+        }
+
+        /* Royalty Reference */
+        .royalty-table {
+            font-size: 10px;
+        }
+
+        .royalty-row-title {
+            color: #7dcfff;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .royalty-row-title:first-child {
+            margin-top: 0;
+        }
+
+        .royalty-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            color: #565f89;
+        }
+
+        .royalty-item .points {
+            color: #e0af68;
+        }
+
+        /* Stats Section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: #1a1b26;
+            border-radius: 5px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #565f89;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #7dcfff;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #24283b;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal h2 {
+            margin: 0 0 15px 0;
+            color: #7aa2f7;
+        }
+
+        .modal h2.win {
+            color: #9ece6a;
+        }
+
+        .modal h2.lose {
+            color: #f7768e;
+        }
+
+        .modal-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .modal-score.positive {
+            color: #9ece6a;
+        }
+
+        .modal-score.negative {
+            color: #f7768e;
+        }
+
+        .modal-breakdown {
+            text-align: left;
+            background: #1a1b26;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .breakdown-row.total {
+            border-top: 1px solid #414868;
+            margin-top: 8px;
+            padding-top: 8px;
+            font-weight: bold;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        /* Fantasy Land Indicator */
+        .fantasy-indicator {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #bb9af7 0%, #7aa2f7 100%);
+            color: #1a1b26;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 100;
+            animation: glow 2s infinite;
+        }
+
+        .fantasy-indicator.show {
+            display: block;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(187, 154, 247, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(187, 154, 247, 0.8); }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+
+            .side-panel {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .panel-section {
+                flex: 1;
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>OFC Pineapple Poker</h1>
+
+        <div class="top-bar">
+            <div class="controls">
+                <button id="newGameBtn">New Game</button>
+                <button id="dailyBtn" class="daily">Daily Challenge</button>
+                <button id="practiceBtn" class="secondary">Practice</button>
+            </div>
+            <div class="status">
+                <div class="status-item">Round <strong id="roundNum">1</strong>/5</div>
+                <div class="status-item">Mode: <strong id="gameMode">VS AI</strong></div>
+                <div class="status-item" id="dailyIndicator" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="boards-container">
+                <!-- AI Board -->
+                <div class="board" id="aiBoard">
+                    <div class="board-header">
+                        <span class="board-title ai">AI Opponent</span>
+                        <span class="board-score">
+                            Royalties: <span class="royalties" id="aiRoyalties">0</span>
+                            <span class="foul" id="aiFoul" style="display: none;"> FOUL!</span>
+                        </span>
+                    </div>
+                    <div class="board-rows" id="aiRows">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Player Board -->
+                <div class="board" id="playerBoard">
+                    <div class="board-header">
+                        <span class="board-title player">Your Board</span>
+                        <span class="board-score">
+                            Royalties: <span class="royalties" id="playerRoyalties">0</span>
+                            <span class="foul" id="playerFoul" style="display: none;"> FOUL!</span>
+                        </span>
+                    </div>
+                    <div class="board-rows" id="playerRows">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Hand Area -->
+                <div class="hand-area" id="handArea">
+                    <div class="hand-header">
+                        <span class="hand-title" id="handTitle">Your Hand</span>
+                        <span class="hand-instruction" id="handInstruction">Click a card, then click a slot to place it</span>
+                    </div>
+                    <div class="hand-cards" id="handCards">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <button class="discard-btn danger" id="discardBtn" style="display: none;">Discard Remaining Card</button>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <!-- Stats -->
+                <div class="panel-section">
+                    <div class="panel-title">Session Stats</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Games</div>
+                            <div class="stat-value" id="statGames">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Win %</div>
+                            <div class="stat-value" id="statWinPct">0%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Best</div>
+                            <div class="stat-value" id="statBest">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">FL Runs</div>
+                            <div class="stat-value" id="statFantasy">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Probabilities -->
+                <div class="panel-section" id="probPanel">
+                    <div class="panel-title">Draw Probabilities</div>
+                    <div id="probContent">
+                        <div class="prob-item">
+                            <span class="prob-label">No active draws</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Royalty Reference -->
+                <div class="panel-section">
+                    <div class="panel-title">Royalty Reference</div>
+                    <div class="royalty-table">
+                        <div class="royalty-row-title">Front (3 cards)</div>
+                        <div class="royalty-item"><span>66-JJ</span><span class="points">1-6</span></div>
+                        <div class="royalty-item"><span>QQ/KK/AA</span><span class="points">7/8/9</span></div>
+                        <div class="royalty-item"><span>Trips 22-AA</span><span class="points">10-22</span></div>
+
+                        <div class="royalty-row-title">Middle (5 cards)</div>
+                        <div class="royalty-item"><span>Trips</span><span class="points">+2</span></div>
+                        <div class="royalty-item"><span>Straight/Flush</span><span class="points">+4/+8</span></div>
+                        <div class="royalty-item"><span>FH/Quads</span><span class="points">+12/+20</span></div>
+                        <div class="royalty-item"><span>SF/RF</span><span class="points">+30/+50</span></div>
+
+                        <div class="royalty-row-title">Back (5 cards)</div>
+                        <div class="royalty-item"><span>Straight/Flush</span><span class="points">+2/+4</span></div>
+                        <div class="royalty-item"><span>FH/Quads</span><span class="points">+6/+10</span></div>
+                        <div class="royalty-item"><span>SF/RF</span><span class="points">+15/+25</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fantasy-indicator" id="fantasyIndicator">
+        FANTASY LAND - Place all 14 cards!
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2 id="modalTitle">Game Over</h2>
+            <div class="modal-score" id="modalScore">+12</div>
+            <div class="modal-breakdown" id="modalBreakdown">
+                <!-- Rendered by JS -->
+            </div>
+            <div class="modal-buttons">
+                <button id="modalNewGame">New Game</button>
+                <button id="modalDaily" class="daily">Daily Challenge</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const SUITS = ['h', 'd', 'c', 's'];
+        const SUIT_SYMBOLS = { h: '♥', d: '♦', c: '♣', s: '♠' };
+        const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+        const RANK_VALUES = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+
+        // Hand Rankings
+        const HAND_RANKS = {
+            HIGH_CARD: 0,
+            PAIR: 1,
+            TWO_PAIR: 2,
+            TRIPS: 3,
+            STRAIGHT: 4,
+            FLUSH: 5,
+            FULL_HOUSE: 6,
+            QUADS: 7,
+            STRAIGHT_FLUSH: 8,
+            ROYAL_FLUSH: 9
+        };
+
+        // Royalty Tables
+        const FRONT_PAIR_ROYALTIES = { '6': 1, '7': 2, '8': 3, '9': 4, 'T': 5, 'J': 6, 'Q': 7, 'K': 8, 'A': 9 };
+        const FRONT_TRIPS_ROYALTIES = { '2': 10, '3': 11, '4': 12, '5': 13, '6': 14, '7': 15, '8': 16, '9': 17, 'T': 18, 'J': 19, 'Q': 20, 'K': 21, 'A': 22 };
+        const MIDDLE_ROYALTIES = { [HAND_RANKS.TRIPS]: 2, [HAND_RANKS.STRAIGHT]: 4, [HAND_RANKS.FLUSH]: 8, [HAND_RANKS.FULL_HOUSE]: 12, [HAND_RANKS.QUADS]: 20, [HAND_RANKS.STRAIGHT_FLUSH]: 30, [HAND_RANKS.ROYAL_FLUSH]: 50 };
+        const BACK_ROYALTIES = { [HAND_RANKS.STRAIGHT]: 2, [HAND_RANKS.FLUSH]: 4, [HAND_RANKS.FULL_HOUSE]: 6, [HAND_RANKS.QUADS]: 10, [HAND_RANKS.STRAIGHT_FLUSH]: 15, [HAND_RANKS.ROYAL_FLUSH]: 25 };
+
+        // Seeded random (Mulberry32)
+        function mulberry32(seed) {
+            return function() {
+                let t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        function getTodaySeed() {
+            const now = new Date();
+            return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+        }
+
+        function formatDate(seed) {
+            const year = Math.floor(seed / 10000);
+            const month = Math.floor((seed % 10000) / 100);
+            const day = seed % 100;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[month - 1]} ${day}, ${year}`;
+        }
+
+        // Current random function
+        let rng = Math.random;
+
+        // Fisher-Yates shuffle
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(rng() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Create deck
+        function createDeck() {
+            const deck = [];
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    deck.push({ rank, suit });
+                }
+            }
+            return deck;
+        }
+
+        // Game State
+        let gameState = {
+            phase: 'idle',
+            round: 0,
+            mode: 'vs_ai',
+            deck: [],
+            deadCards: [],
+            player: { front: [], middle: [], back: [], hand: [], royalties: 0, isFoul: false },
+            ai: { front: [], middle: [], back: [], hand: [], royalties: 0, isFoul: false },
+            selectedCard: null,
+            seed: null,
+            inFantasyLand: false,
+            fantasyCards: [],
+            placedThisRound: 0,
+            discardedThisRound: false
+        };
+
+        // Stats (persisted)
+        let stats = {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            bestScore: 0,
+            fantasyRuns: 0,
+            dailyResults: {}
+        };
+
+        // Load/Save stats
+        function loadStats() {
+            try {
+                const saved = localStorage.getItem('ofcPineappleStats');
+                if (saved) stats = JSON.parse(saved);
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        function saveStats() {
+            try {
+                localStorage.setItem('ofcPineappleStats', JSON.stringify(stats));
+            } catch (e) {
+                console.error('Failed to save stats:', e);
+            }
+        }
+
+        // Card Utilities
+        function cardKey(card) {
+            return card.rank + card.suit;
+        }
+
+        function cardDisplay(card) {
+            return card.rank + SUIT_SYMBOLS[card.suit];
+        }
+
+        function isRed(card) {
+            return card.suit === 'h' || card.suit === 'd';
+        }
+
+        // Hand Evaluation
+        function evaluateHand(cards) {
+            if (!cards || cards.length === 0) return { rank: -1, value: 0, name: 'Empty' };
+
+            const sorted = [...cards].sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank]);
+            const ranks = sorted.map(c => c.rank);
+            const values = sorted.map(c => RANK_VALUES[c.rank]);
+
+            // Count ranks and suits
+            const rankCounts = {};
+            const suitCounts = {};
+            for (const card of cards) {
+                rankCounts[card.rank] = (rankCounts[card.rank] || 0) + 1;
+                suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+            }
+
+            const counts = Object.values(rankCounts).sort((a, b) => b - a);
+            const isFlush = cards.length === 5 && Object.values(suitCounts).some(c => c === 5);
+
+            // Check straight (5 cards only)
+            let isStraight = false;
+            let straightHigh = 0;
+            if (cards.length === 5) {
+                const uniqueValues = [...new Set(values)].sort((a, b) => b - a);
+                if (uniqueValues.length === 5) {
+                    if (uniqueValues[0] - uniqueValues[4] === 4) {
+                        isStraight = true;
+                        straightHigh = uniqueValues[0];
+                    }
+                    // Wheel (A-2-3-4-5)
+                    if (uniqueValues.join(',') === '14,5,4,3,2') {
+                        isStraight = true;
+                        straightHigh = 5;
+                    }
+                }
+            }
+
+            // Determine hand rank
+            let handRank, handValue, handName;
+
+            if (isStraight && isFlush) {
+                if (straightHigh === 14) {
+                    handRank = HAND_RANKS.ROYAL_FLUSH;
+                    handName = 'Royal Flush';
+                } else {
+                    handRank = HAND_RANKS.STRAIGHT_FLUSH;
+                    handName = 'Straight Flush';
+                }
+                handValue = straightHigh;
+            } else if (counts[0] === 4) {
+                handRank = HAND_RANKS.QUADS;
+                handName = 'Four of a Kind';
+                const quadRank = Object.keys(rankCounts).find(r => rankCounts[r] === 4);
+                handValue = RANK_VALUES[quadRank] * 100;
+            } else if (counts[0] === 3 && counts[1] === 2) {
+                handRank = HAND_RANKS.FULL_HOUSE;
+                handName = 'Full House';
+                const tripRank = Object.keys(rankCounts).find(r => rankCounts[r] === 3);
+                const pairRank = Object.keys(rankCounts).find(r => rankCounts[r] === 2);
+                handValue = RANK_VALUES[tripRank] * 100 + RANK_VALUES[pairRank];
+            } else if (isFlush) {
+                handRank = HAND_RANKS.FLUSH;
+                handName = 'Flush';
+                handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 4 - i), 0);
+            } else if (isStraight) {
+                handRank = HAND_RANKS.STRAIGHT;
+                handName = 'Straight';
+                handValue = straightHigh;
+            } else if (counts[0] === 3) {
+                handRank = HAND_RANKS.TRIPS;
+                handName = 'Three of a Kind';
+                const tripRank = Object.keys(rankCounts).find(r => rankCounts[r] === 3);
+                handValue = RANK_VALUES[tripRank] * 100;
+            } else if (counts[0] === 2 && counts[1] === 2) {
+                handRank = HAND_RANKS.TWO_PAIR;
+                handName = 'Two Pair';
+                const pairs = Object.keys(rankCounts).filter(r => rankCounts[r] === 2).sort((a, b) => RANK_VALUES[b] - RANK_VALUES[a]);
+                handValue = RANK_VALUES[pairs[0]] * 100 + RANK_VALUES[pairs[1]];
+            } else if (counts[0] === 2) {
+                handRank = HAND_RANKS.PAIR;
+                handName = 'Pair';
+                const pairRank = Object.keys(rankCounts).find(r => rankCounts[r] === 2);
+                handValue = RANK_VALUES[pairRank] * 1000;
+                // Add kickers
+                const kickers = sorted.filter(c => c.rank !== pairRank).map(c => RANK_VALUES[c.rank]);
+                kickers.forEach((k, i) => handValue += k * Math.pow(15, 2 - i));
+            } else {
+                handRank = HAND_RANKS.HIGH_CARD;
+                handName = 'High Card';
+                handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 4 - i), 0);
+            }
+
+            // For 3-card front row, adjust evaluation
+            if (cards.length === 3) {
+                if (counts[0] === 3) {
+                    handRank = HAND_RANKS.TRIPS;
+                    handName = 'Trips';
+                    const tripRank = Object.keys(rankCounts).find(r => rankCounts[r] === 3);
+                    handValue = RANK_VALUES[tripRank];
+                } else if (counts[0] === 2) {
+                    handRank = HAND_RANKS.PAIR;
+                    handName = 'Pair';
+                    const pairRank = Object.keys(rankCounts).find(r => rankCounts[r] === 2);
+                    const kicker = sorted.find(c => c.rank !== pairRank);
+                    handValue = RANK_VALUES[pairRank] * 100 + RANK_VALUES[kicker.rank];
+                } else {
+                    handRank = HAND_RANKS.HIGH_CARD;
+                    handName = 'High Card';
+                    handValue = values.reduce((sum, v, i) => sum + v * Math.pow(15, 2 - i), 0);
+                }
+            }
+
+            return { rank: handRank, value: handValue, name: handName, pairRank: counts[0] === 2 ? Object.keys(rankCounts).find(r => rankCounts[r] === 2) : null };
+        }
+
+        // Compare hands (returns positive if a > b)
+        function compareHands(a, b) {
+            const evalA = evaluateHand(a);
+            const evalB = evaluateHand(b);
+            if (evalA.rank !== evalB.rank) return evalA.rank - evalB.rank;
+            return evalA.value - evalB.value;
+        }
+
+        // Check foul (back must beat middle must beat front)
+        function checkFoul(front, middle, back) {
+            if (front.length < 3 || middle.length < 5 || back.length < 5) return false;
+            return compareHands(back, middle) < 0 || compareHands(middle, front) < 0;
+        }
+
+        // Calculate royalties
+        function calculateRoyalties(front, middle, back) {
+            let total = 0;
+
+            // Front royalties
+            if (front.length === 3) {
+                const eval3 = evaluateHand(front);
+                if (eval3.rank === HAND_RANKS.TRIPS) {
+                    const tripRank = Object.keys(front.reduce((acc, c) => { acc[c.rank] = (acc[c.rank] || 0) + 1; return acc; }, {})).find(r => front.filter(c => c.rank === r).length === 3);
+                    total += FRONT_TRIPS_ROYALTIES[tripRank] || 0;
+                } else if (eval3.rank === HAND_RANKS.PAIR) {
+                    const pairRank = Object.keys(front.reduce((acc, c) => { acc[c.rank] = (acc[c.rank] || 0) + 1; return acc; }, {})).find(r => front.filter(c => c.rank === r).length === 2);
+                    total += FRONT_PAIR_ROYALTIES[pairRank] || 0;
+                }
+            }
+
+            // Middle royalties
+            if (middle.length === 5) {
+                const eval5m = evaluateHand(middle);
+                total += MIDDLE_ROYALTIES[eval5m.rank] || 0;
+            }
+
+            // Back royalties
+            if (back.length === 5) {
+                const eval5b = evaluateHand(back);
+                total += BACK_ROYALTIES[eval5b.rank] || 0;
+            }
+
+            return total;
+        }
+
+        // Check Fantasy Land entry (QQ+ in front without fouling)
+        function checkFantasyLandEntry(front, middle, back) {
+            if (checkFoul(front, middle, back)) return false;
+            if (front.length !== 3) return false;
+
+            const eval3 = evaluateHand(front);
+            if (eval3.rank === HAND_RANKS.TRIPS) return true;
+            if (eval3.rank === HAND_RANKS.PAIR) {
+                const pairRank = Object.keys(front.reduce((acc, c) => { acc[c.rank] = (acc[c.rank] || 0) + 1; return acc; }, {})).find(r => front.filter(c => c.rank === r).length === 2);
+                return ['Q', 'K', 'A'].includes(pairRank);
+            }
+            return false;
+        }
+
+        // Check Fantasy Land stay (trips front OR quads+ back OR FH+ middle)
+        function checkFantasyLandStay(front, middle, back) {
+            if (checkFoul(front, middle, back)) return false;
+
+            const evalFront = evaluateHand(front);
+            if (evalFront.rank === HAND_RANKS.TRIPS) return true;
+
+            const evalMiddle = evaluateHand(middle);
+            if (evalMiddle.rank >= HAND_RANKS.FULL_HOUSE) return true;
+
+            const evalBack = evaluateHand(back);
+            if (evalBack.rank >= HAND_RANKS.QUADS) return true;
+
+            return false;
+        }
+
+        // AI Logic (Medium difficulty - rule-based)
+        function aiPlaceCards(hand, board, isFantasy = false) {
+            const placements = [];
+            const availableCards = [...hand];
+
+            // Sort by value for priority
+            availableCards.sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank]);
+
+            // Greedy placement with foul avoidance
+            for (const card of availableCards) {
+                if (placements.length >= (isFantasy ? 13 : 2)) break;
+
+                // Try each row and pick best non-fouling option
+                const options = [];
+
+                // Try back first (safest)
+                if (board.back.length < 5) {
+                    const testBack = [...board.back, card];
+                    const testMiddle = [...board.middle, ...placements.filter(p => p.row === 'middle').map(p => p.card)];
+                    const testFront = [...board.front, ...placements.filter(p => p.row === 'front').map(p => p.card)];
+
+                    // Check if this could still be valid
+                    let score = RANK_VALUES[card.rank];
+                    // Bonus for completing draws
+                    if (hasFlushDraw(testBack)) score += 20;
+                    if (hasStraightDraw(testBack)) score += 15;
+                    options.push({ row: 'back', score });
+                }
+
+                // Try middle
+                if (board.middle.length + placements.filter(p => p.row === 'middle').length < 5) {
+                    let score = RANK_VALUES[card.rank] + 5; // Slight preference
+                    options.push({ row: 'middle', score });
+                }
+
+                // Try front (be careful)
+                if (board.front.length + placements.filter(p => p.row === 'front').length < 3) {
+                    let score = 0;
+                    // High pairs go front for Fantasy Land
+                    if (['Q', 'K', 'A'].includes(card.rank)) {
+                        const frontCards = [...board.front, ...placements.filter(p => p.row === 'front').map(p => p.card)];
+                        if (frontCards.some(c => c.rank === card.rank)) {
+                            score += 50; // Complete a high pair
+                        }
+                    }
+                    options.push({ row: 'front', score });
+                }
+
+                // Pick best option
+                if (options.length > 0) {
+                    options.sort((a, b) => b.score - a.score);
+                    placements.push({ card, row: options[0].row });
+                }
+            }
+
+            // Return placements and discard
+            const discardIdx = isFantasy ? 13 : 2;
+            return {
+                placements: placements.slice(0, discardIdx),
+                discard: availableCards.find(c => !placements.slice(0, discardIdx).some(p => p.card === c))
+            };
+        }
+
+        function hasFlushDraw(cards) {
+            if (cards.length < 3) return false;
+            const suitCounts = {};
+            for (const card of cards) {
+                suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+            }
+            return Object.values(suitCounts).some(c => c >= 4);
+        }
+
+        function hasStraightDraw(cards) {
+            if (cards.length < 4) return false;
+            const values = [...new Set(cards.map(c => RANK_VALUES[c.rank]))].sort((a, b) => a - b);
+            for (let i = 0; i < values.length - 3; i++) {
+                if (values[i + 3] - values[i] <= 4) return true;
+            }
+            return false;
+        }
+
+        // Calculate draw probabilities
+        function calculateProbabilities(board, deadCards) {
+            const probs = [];
+            const remaining = createDeck().filter(c => !deadCards.some(d => cardKey(d) === cardKey(c)));
+
+            // Check back row draws
+            if (board.back.length >= 3 && board.back.length < 5) {
+                // Flush draw
+                const suitCounts = {};
+                for (const card of board.back) {
+                    suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+                }
+                for (const [suit, count] of Object.entries(suitCounts)) {
+                    if (count >= 3) {
+                        const outs = remaining.filter(c => c.suit === suit).length;
+                        const cardsNeeded = 5 - board.back.length;
+                        if (outs > 0) {
+                            const prob = Math.min(100, Math.round(outs / remaining.length * 100 * (cardsNeeded === 1 ? 1 : 0.5)));
+                            probs.push({ label: `Back ${SUIT_SYMBOLS[suit]} flush`, value: prob, outs });
+                        }
+                    }
+                }
+
+                // Straight draw
+                const values = board.back.map(c => RANK_VALUES[c.rank]);
+                const gaps = findStraightGaps(values);
+                if (gaps.length > 0 && gaps.length <= 2) {
+                    const outs = remaining.filter(c => gaps.includes(RANK_VALUES[c.rank])).length;
+                    if (outs > 0) {
+                        const prob = Math.min(100, Math.round(outs / remaining.length * 100));
+                        probs.push({ label: 'Back straight', value: prob, outs });
+                    }
+                }
+            }
+
+            // Check middle row draws
+            if (board.middle.length >= 3 && board.middle.length < 5) {
+                const suitCounts = {};
+                for (const card of board.middle) {
+                    suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+                }
+                for (const [suit, count] of Object.entries(suitCounts)) {
+                    if (count >= 3) {
+                        const outs = remaining.filter(c => c.suit === suit).length;
+                        if (outs > 0) {
+                            const prob = Math.min(100, Math.round(outs / remaining.length * 100 * 0.5));
+                            probs.push({ label: `Mid ${SUIT_SYMBOLS[suit]} flush`, value: prob, outs });
+                        }
+                    }
+                }
+            }
+
+            return probs;
+        }
+
+        function findStraightGaps(values) {
+            values = [...new Set(values)].sort((a, b) => a - b);
+            const gaps = [];
+
+            // Check all possible 5-card straights
+            for (let high = 5; high <= 14; high++) {
+                const needed = [];
+                for (let v = high - 4; v <= high; v++) {
+                    const checkVal = v === 1 ? 14 : v; // Handle Ace-low
+                    if (!values.includes(checkVal)) needed.push(checkVal);
+                }
+                if (needed.length === 1 || needed.length === 2) {
+                    gaps.push(...needed);
+                }
+            }
+
+            return [...new Set(gaps)];
+        }
+
+        // Game Flow
+        function initGame(mode = 'vs_ai', seed = null) {
+            if (seed !== null) {
+                rng = mulberry32(seed);
+                gameState.seed = seed;
+            } else {
+                rng = Math.random;
+                gameState.seed = null;
+            }
+
+            gameState.deck = shuffle(createDeck());
+            gameState.deadCards = [];
+            gameState.player = { front: [], middle: [], back: [], hand: [], royalties: 0, isFoul: false };
+            gameState.ai = { front: [], middle: [], back: [], hand: [], royalties: 0, isFoul: false };
+            gameState.selectedCard = null;
+            gameState.round = 1;
+            gameState.mode = mode;
+            gameState.phase = 'initial';
+            gameState.inFantasyLand = false;
+            gameState.placedThisRound = 0;
+            gameState.discardedThisRound = false;
+
+            // Deal initial 5 cards to each player
+            gameState.player.hand = gameState.deck.splice(0, 5);
+            if (mode !== 'practice') {
+                gameState.ai.hand = gameState.deck.splice(0, 5);
+                // AI places initial cards immediately
+                aiPlaceInitial();
+            }
+
+            render();
+        }
+
+        function aiPlaceInitial() {
+            const hand = gameState.ai.hand;
+            hand.sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank]);
+
+            // Simple heuristic: pairs to appropriate rows, high cards spread
+            const pairs = [];
+            const singles = [];
+            const rankCounts = {};
+
+            for (const card of hand) {
+                rankCounts[card.rank] = (rankCounts[card.rank] || 0) + 1;
+            }
+
+            for (const card of hand) {
+                if (rankCounts[card.rank] === 2) {
+                    pairs.push(card);
+                } else {
+                    singles.push(card);
+                }
+            }
+
+            // Place cards
+            let placed = { front: 0, middle: 0, back: 0 };
+
+            // High pair to front for FL chase
+            for (let i = 0; i < pairs.length && i < 2; i++) {
+                if (['Q', 'K', 'A'].includes(pairs[i].rank) && placed.front < 2) {
+                    gameState.ai.front.push(pairs[i]);
+                    placed.front++;
+                } else if (placed.back < 3) {
+                    gameState.ai.back.push(pairs[i]);
+                    placed.back++;
+                } else {
+                    gameState.ai.middle.push(pairs[i]);
+                    placed.middle++;
+                }
+            }
+
+            // Singles to back and middle
+            for (const card of singles) {
+                if (placed.back < 2) {
+                    gameState.ai.back.push(card);
+                    placed.back++;
+                } else if (placed.middle < 2) {
+                    gameState.ai.middle.push(card);
+                    placed.middle++;
+                } else if (placed.front < 1) {
+                    gameState.ai.front.push(card);
+                    placed.front++;
+                }
+            }
+
+            gameState.ai.hand = [];
+        }
+
+        function dealPineapple() {
+            gameState.round++;
+            gameState.phase = 'drawing';
+            gameState.placedThisRound = 0;
+            gameState.discardedThisRound = false;
+
+            // Deal 3 cards to player
+            gameState.player.hand = gameState.deck.splice(0, 3);
+
+            // Deal and place for AI
+            if (gameState.mode !== 'practice') {
+                const aiHand = gameState.deck.splice(0, 3);
+                const aiResult = aiPlaceCards(aiHand, gameState.ai);
+                for (const placement of aiResult.placements) {
+                    gameState.ai[placement.row].push(placement.card);
+                }
+                if (aiResult.discard) {
+                    gameState.deadCards.push(aiResult.discard);
+                }
+            }
+
+            render();
+        }
+
+        function placeCard(row) {
+            if (!gameState.selectedCard) return;
+            if (gameState.phase === 'initial' && gameState.player.hand.length === 0) return;
+            if (gameState.phase === 'drawing' && gameState.placedThisRound >= 2) return;
+
+            const maxSize = row === 'front' ? 3 : 5;
+            if (gameState.player[row].length >= maxSize) return;
+
+            // Move card from hand to row
+            const cardIdx = gameState.player.hand.findIndex(c => cardKey(c) === cardKey(gameState.selectedCard));
+            if (cardIdx === -1) return;
+
+            const card = gameState.player.hand.splice(cardIdx, 1)[0];
+            gameState.player[row].push(card);
+            gameState.selectedCard = null;
+            gameState.placedThisRound++;
+
+            // Track dead cards
+            gameState.deadCards.push(card);
+
+            render();
+            checkRoundEnd();
+        }
+
+        function discardCard() {
+            if (gameState.phase !== 'drawing') return;
+            if (gameState.placedThisRound < 2) return;
+            if (gameState.player.hand.length !== 1) return;
+
+            const discarded = gameState.player.hand.pop();
+            gameState.deadCards.push(discarded);
+            gameState.discardedThisRound = true;
+
+            render();
+            checkRoundEnd();
+        }
+
+        function isBoardFull(board) {
+            return board.front.length === 3 && board.middle.length === 5 && board.back.length === 5;
+        }
+
+        function checkRoundEnd() {
+            // Safety check: if board is full, end the game
+            if (isBoardFull(gameState.player)) {
+                endGame();
+                return;
+            }
+
+            if (gameState.phase === 'initial') {
+                if (gameState.player.hand.length === 0) {
+                    // Initial placement complete, start pineapple rounds
+                    if (gameState.round < 5) {
+                        dealPineapple();
+                    } else {
+                        endGame();
+                    }
+                }
+            } else if (gameState.phase === 'drawing') {
+                if (gameState.placedThisRound >= 2 && gameState.discardedThisRound) {
+                    if (gameState.round < 5) {
+                        dealPineapple();
+                    } else {
+                        endGame();
+                    }
+                }
+            }
+        }
+
+        function endGame() {
+            gameState.phase = 'complete';
+
+            // Calculate final scores
+            gameState.player.isFoul = checkFoul(gameState.player.front, gameState.player.middle, gameState.player.back);
+            gameState.player.royalties = gameState.player.isFoul ? 0 : calculateRoyalties(gameState.player.front, gameState.player.middle, gameState.player.back);
+
+            if (gameState.mode !== 'practice') {
+                gameState.ai.isFoul = checkFoul(gameState.ai.front, gameState.ai.middle, gameState.ai.back);
+                gameState.ai.royalties = gameState.ai.isFoul ? 0 : calculateRoyalties(gameState.ai.front, gameState.ai.middle, gameState.ai.back);
+            }
+
+            // Calculate game score
+            const score = calculateGameScore();
+
+            // Update stats
+            stats.gamesPlayed++;
+            if (score > 0) stats.gamesWon++;
+            if (score > stats.bestScore) stats.bestScore = score;
+            if (checkFantasyLandEntry(gameState.player.front, gameState.player.middle, gameState.player.back)) {
+                stats.fantasyRuns++;
+            }
+            saveStats();
+
+            render();
+            showResultModal(score);
+        }
+
+        function calculateGameScore() {
+            if (gameState.mode === 'practice') {
+                return gameState.player.royalties;
+            }
+
+            let playerPoints = 0;
+            let aiPoints = 0;
+
+            if (gameState.player.isFoul && gameState.ai.isFoul) {
+                // Both foul, no points
+                return 0;
+            } else if (gameState.player.isFoul) {
+                return -6 - gameState.ai.royalties;
+            } else if (gameState.ai.isFoul) {
+                return 6 + gameState.player.royalties;
+            }
+
+            // Compare rows
+            let playerWins = 0;
+            const frontCmp = compareHands(gameState.player.front, gameState.ai.front);
+            const middleCmp = compareHands(gameState.player.middle, gameState.ai.middle);
+            const backCmp = compareHands(gameState.player.back, gameState.ai.back);
+
+            if (frontCmp > 0) playerWins++;
+            else if (frontCmp < 0) playerWins--;
+
+            if (middleCmp > 0) playerWins++;
+            else if (middleCmp < 0) playerWins--;
+
+            if (backCmp > 0) playerWins++;
+            else if (backCmp < 0) playerWins--;
+
+            playerPoints = playerWins;
+
+            // Scoop bonus
+            if (playerWins === 3) playerPoints += 3;
+            else if (playerWins === -3) playerPoints -= 3;
+
+            // Royalties difference
+            playerPoints += gameState.player.royalties - gameState.ai.royalties;
+
+            return playerPoints;
+        }
+
+        function showResultModal(score) {
+            const modal = document.getElementById('modalOverlay');
+            const title = document.getElementById('modalTitle');
+            const scoreEl = document.getElementById('modalScore');
+            const breakdown = document.getElementById('modalBreakdown');
+
+            if (score > 0) {
+                title.textContent = 'You Win!';
+                title.className = 'win';
+            } else if (score < 0) {
+                title.textContent = 'You Lose';
+                title.className = 'lose';
+            } else {
+                title.textContent = 'Draw';
+                title.className = '';
+            }
+
+            scoreEl.textContent = score >= 0 ? '+' + score : score;
+            scoreEl.className = 'modal-score ' + (score >= 0 ? 'positive' : 'negative');
+
+            // Build breakdown
+            let html = '';
+            if (gameState.mode !== 'practice') {
+                const frontCmp = compareHands(gameState.player.front, gameState.ai.front);
+                const middleCmp = compareHands(gameState.player.middle, gameState.ai.middle);
+                const backCmp = compareHands(gameState.player.back, gameState.ai.back);
+
+                html += `<div class="breakdown-row"><span>Front</span><span>${frontCmp > 0 ? '+1' : frontCmp < 0 ? '-1' : '0'}</span></div>`;
+                html += `<div class="breakdown-row"><span>Middle</span><span>${middleCmp > 0 ? '+1' : middleCmp < 0 ? '-1' : '0'}</span></div>`;
+                html += `<div class="breakdown-row"><span>Back</span><span>${backCmp > 0 ? '+1' : backCmp < 0 ? '-1' : '0'}</span></div>`;
+
+                const playerWins = (frontCmp > 0 ? 1 : 0) + (middleCmp > 0 ? 1 : 0) + (backCmp > 0 ? 1 : 0);
+                const aiWins = (frontCmp < 0 ? 1 : 0) + (middleCmp < 0 ? 1 : 0) + (backCmp < 0 ? 1 : 0);
+                if (playerWins === 3) html += `<div class="breakdown-row"><span>Scoop Bonus</span><span>+3</span></div>`;
+                if (aiWins === 3) html += `<div class="breakdown-row"><span>Scooped</span><span>-3</span></div>`;
+            }
+
+            html += `<div class="breakdown-row"><span>Your Royalties</span><span>+${gameState.player.royalties}</span></div>`;
+            if (gameState.mode !== 'practice') {
+                html += `<div class="breakdown-row"><span>AI Royalties</span><span>-${gameState.ai.royalties}</span></div>`;
+            }
+
+            if (gameState.player.isFoul) {
+                html += `<div class="breakdown-row"><span>FOUL!</span><span>-6</span></div>`;
+            }
+
+            if (checkFantasyLandEntry(gameState.player.front, gameState.player.middle, gameState.player.back)) {
+                html += `<div class="breakdown-row" style="color: #bb9af7"><span>Fantasy Land Qualified!</span><span>QQ+</span></div>`;
+            }
+
+            html += `<div class="breakdown-row total"><span>Total</span><span>${score >= 0 ? '+' : ''}${score}</span></div>`;
+
+            breakdown.innerHTML = html;
+            modal.classList.add('show');
+        }
+
+        function hideModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        // Rendering
+        function render() {
+            renderBoard('player', gameState.player);
+            if (gameState.mode !== 'practice') {
+                renderBoard('ai', gameState.ai, false); // OFC is "open face" - all placed cards visible
+            }
+            renderHand();
+            renderProbabilities();
+            renderStats();
+            updateStatus();
+        }
+
+        function renderBoard(type, board, hideCards = false) {
+            const rows = document.getElementById(type + 'Rows');
+            rows.innerHTML = '';
+
+            const rowConfigs = [
+                { name: 'front', label: 'Front', max: 3 },
+                { name: 'middle', label: 'Middle', max: 5 },
+                { name: 'back', label: 'Back', max: 5 }
+            ];
+
+            for (const config of rowConfigs) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row';
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'row-label';
+                labelDiv.textContent = config.label;
+                rowDiv.appendChild(labelDiv);
+
+                const cardsDiv = document.createElement('div');
+                cardsDiv.className = 'row-cards';
+
+                // Render existing cards
+                for (const card of board[config.name]) {
+                    const cardEl = createCardElement(card, hideCards && gameState.phase !== 'complete');
+                    cardEl.classList.add('in-slot');
+                    cardsDiv.appendChild(wrapInSlot(cardEl));
+                }
+
+                // Render empty slots
+                const emptySlots = config.max - board[config.name].length;
+                for (let i = 0; i < emptySlots; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'card-slot';
+
+                    if (type === 'player' && gameState.selectedCard && gameState.phase !== 'complete') {
+                        slot.classList.add('highlight');
+                        slot.addEventListener('click', () => placeCard(config.name));
+                    } else if (type === 'ai') {
+                        slot.classList.add('disabled');
+                    }
+
+                    cardsDiv.appendChild(slot);
+                }
+
+                rowDiv.appendChild(cardsDiv);
+
+                // Row info (hand evaluation)
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'row-info';
+                if (board[config.name].length > 0 && (type === 'player' || gameState.phase === 'complete')) {
+                    const eval5 = evaluateHand(board[config.name]);
+                    infoDiv.textContent = eval5.name;
+
+                    // Show royalties if applicable
+                    let royalty = 0;
+                    if (config.name === 'front' && board.front.length === 3) {
+                        royalty = calculateRoyalties(board.front, [], []);
+                    } else if (config.name === 'middle' && board.middle.length === 5) {
+                        royalty = calculateRoyalties([], board.middle, []);
+                    } else if (config.name === 'back' && board.back.length === 5) {
+                        royalty = calculateRoyalties([], [], board.back);
+                    }
+                    if (royalty > 0) {
+                        infoDiv.textContent += ` (+${royalty})`;
+                        infoDiv.classList.add('royalty');
+                    }
+                }
+                rowDiv.appendChild(infoDiv);
+
+                rows.appendChild(rowDiv);
+            }
+
+            // Update royalties display
+            const royaltiesEl = document.getElementById(type + 'Royalties');
+            const foulEl = document.getElementById(type + 'Foul');
+
+            if (board.front.length === 3 && board.middle.length === 5 && board.back.length === 5) {
+                const isFoul = checkFoul(board.front, board.middle, board.back);
+                const royalties = isFoul ? 0 : calculateRoyalties(board.front, board.middle, board.back);
+                royaltiesEl.textContent = royalties;
+                foulEl.style.display = isFoul ? 'inline' : 'none';
+            } else {
+                royaltiesEl.textContent = '0';
+                foulEl.style.display = 'none';
+            }
+        }
+
+        function renderHand() {
+            const handCards = document.getElementById('handCards');
+            const handTitle = document.getElementById('handTitle');
+            const handInstruction = document.getElementById('handInstruction');
+            const discardBtn = document.getElementById('discardBtn');
+
+            handCards.innerHTML = '';
+
+            if (gameState.phase === 'complete') {
+                handTitle.textContent = 'Game Complete';
+                handInstruction.textContent = '';
+                discardBtn.style.display = 'none';
+                return;
+            }
+
+            if (gameState.phase === 'initial') {
+                handTitle.textContent = `Initial Deal (${gameState.player.hand.length} cards)`;
+                handInstruction.textContent = 'Place all 5 cards on your board';
+            } else if (gameState.phase === 'drawing') {
+                const remaining = 2 - gameState.placedThisRound;
+                handTitle.textContent = `Round ${gameState.round}/5`;
+                if (remaining > 0) {
+                    handInstruction.textContent = `Place ${remaining} more card${remaining > 1 ? 's' : ''}, then discard 1`;
+                } else {
+                    handInstruction.textContent = 'Discard remaining card';
+                }
+            }
+
+            for (const card of gameState.player.hand) {
+                const cardEl = createCardElement(card);
+                if (gameState.selectedCard && cardKey(gameState.selectedCard) === cardKey(card)) {
+                    cardEl.classList.add('selected');
+                }
+                cardEl.addEventListener('click', () => selectCard(card));
+                handCards.appendChild(cardEl);
+            }
+
+            // Show discard button when appropriate
+            if (gameState.phase === 'drawing' && gameState.placedThisRound >= 2 && gameState.player.hand.length === 1) {
+                discardBtn.style.display = 'block';
+            } else {
+                discardBtn.style.display = 'none';
+            }
+        }
+
+        function renderProbabilities() {
+            const content = document.getElementById('probContent');
+            const probs = calculateProbabilities(gameState.player, gameState.deadCards);
+
+            if (probs.length === 0) {
+                content.innerHTML = '<div class="prob-item"><span class="prob-label">No active draws</span></div>';
+                return;
+            }
+
+            content.innerHTML = probs.map(p => `
+                <div class="prob-item">
+                    <span class="prob-label">${p.label} (${p.outs} outs)</span>
+                    <span class="prob-value ${p.value < 20 ? 'low' : ''}">${p.value}%</span>
+                </div>
+            `).join('');
+        }
+
+        function renderStats() {
+            document.getElementById('statGames').textContent = stats.gamesPlayed;
+            document.getElementById('statWinPct').textContent = stats.gamesPlayed > 0
+                ? Math.round(stats.gamesWon / stats.gamesPlayed * 100) + '%'
+                : '0%';
+            document.getElementById('statBest').textContent = stats.bestScore > 0 ? '+' + stats.bestScore : stats.bestScore;
+            document.getElementById('statFantasy').textContent = stats.fantasyRuns;
+        }
+
+        function updateStatus() {
+            document.getElementById('roundNum').textContent = gameState.round;
+            document.getElementById('gameMode').textContent =
+                gameState.mode === 'practice' ? 'Practice' :
+                gameState.seed ? 'Daily' : 'VS AI';
+
+            const dailyIndicator = document.getElementById('dailyIndicator');
+            if (gameState.seed) {
+                dailyIndicator.textContent = formatDate(gameState.seed);
+                dailyIndicator.style.display = 'block';
+            } else {
+                dailyIndicator.style.display = 'none';
+            }
+
+            // Show/hide AI board in practice mode
+            document.getElementById('aiBoard').style.display = gameState.mode === 'practice' ? 'none' : 'block';
+        }
+
+        function selectCard(card) {
+            if (gameState.phase === 'complete') return;
+
+            if (gameState.selectedCard && cardKey(gameState.selectedCard) === cardKey(card)) {
+                gameState.selectedCard = null;
+            } else {
+                gameState.selectedCard = card;
+            }
+            render();
+        }
+
+        function createCardElement(card, faceDown = false) {
+            const el = document.createElement('div');
+            el.className = 'card ' + (isRed(card) ? 'red' : 'black');
+
+            if (faceDown) {
+                el.classList.add('face-down');
+                el.innerHTML = '';
+            } else {
+                const display = card.rank === 'T' ? '10' : card.rank;
+                el.innerHTML = `
+                    <div class="corner top">
+                        <span>${display}</span>
+                        <span>${SUIT_SYMBOLS[card.suit]}</span>
+                    </div>
+                    <span class="center-suit">${SUIT_SYMBOLS[card.suit]}</span>
+                    <div class="corner bottom">
+                        <span>${display}</span>
+                        <span>${SUIT_SYMBOLS[card.suit]}</span>
+                    </div>
+                `;
+            }
+
+            return el;
+        }
+
+        function wrapInSlot(cardEl) {
+            const slot = document.createElement('div');
+            slot.className = 'card-slot filled';
+            slot.appendChild(cardEl);
+            return slot;
+        }
+
+        // Event Listeners
+        document.getElementById('newGameBtn').addEventListener('click', () => {
+            hideModal();
+            initGame('vs_ai');
+        });
+
+        document.getElementById('dailyBtn').addEventListener('click', () => {
+            hideModal();
+            initGame('vs_ai', getTodaySeed());
+        });
+
+        document.getElementById('practiceBtn').addEventListener('click', () => {
+            hideModal();
+            initGame('practice');
+        });
+
+        document.getElementById('discardBtn').addEventListener('click', discardCard);
+
+        document.getElementById('modalNewGame').addEventListener('click', () => {
+            hideModal();
+            initGame('vs_ai');
+        });
+
+        document.getElementById('modalDaily').addEventListener('click', () => {
+            hideModal();
+            initGame('vs_ai', getTodaySeed());
+        });
+
+        // Initialize
+        loadStats();
+        initGame('vs_ai');
+    </script>
+</body>
+</html>
